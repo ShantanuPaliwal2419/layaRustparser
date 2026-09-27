@@ -6,31 +6,87 @@ import { getApiMode, setApiMode, checkBackendReachable } from "@/lib/api";
 
 interface HeaderProps {
   currentSection?: string;
-  eps?: number;
+  eps?: number | null;
 }
 
-export function Header({ currentSection = "LIVE_OVERVIEW", eps = 142500 }: HeaderProps) {
+export function Header({
+  currentSection = "LIVE_OVERVIEW",
+  eps,
+}: HeaderProps) {
   const mode = useSyncExternalStore(
     (callback) => {
       window.addEventListener("ulpf_api_mode_change", callback);
-      return () => window.removeEventListener("ulpf_api_mode_change", callback);
+      return () => {
+        window.removeEventListener("ulpf_api_mode_change", callback);
+      };
     },
     () => getApiMode(),
     () => "LIVE"
   );
+
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
   const [timeRange, setTimeRange] = useState<"15m" | "1h" | "24h">("1h");
+  const [mounted, setMounted] = useState(false);
+
+  // Keep server render and initial client render identical.
+  // Actual backend/mode state is resolved only after hydration.
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
-    async function probe() {
-      const ok = await checkBackendReachable();
-      setBackendOnline(ok);
-    }
-    probe();
+    if (!mounted) return;
 
-    const interval = setInterval(probe, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    let active = true;
+    let timerId: ReturnType<typeof setTimeout> | null = null;
+
+    async function probeLoop() {
+      if (!active) return;
+
+      try {
+        const ok = await checkBackendReachable();
+
+        if (!active) return;
+        setBackendOnline(ok);
+      } catch {
+        if (!active) return;
+        setBackendOnline(false);
+      }
+
+      if (!active) return;
+
+      timerId = setTimeout(probeLoop, 5000);
+    }
+
+    probeLoop();
+
+    return () => {
+      active = false;
+
+      if (timerId !== null) {
+        clearTimeout(timerId);
+      }
+    };
+  }, [mounted]);
+
+  /*
+   * During SSR and the initial hydration render:
+   * - do not claim LIVE
+   * - do not claim MOCK
+   * - do not show real EPS
+   *
+   * After mount, the actual API mode + backend reachability determine
+   * the displayed state.
+   */
+  const displayMode = mounted ? mode : "LIVE";
+
+  const isLiveActive =
+    mounted &&
+    displayMode === "LIVE" &&
+    (eps != null || backendOnline === true);
+
+  const isMock = mounted && displayMode === "MOCK";
+  const isOffline = mounted && displayMode === "LIVE" && !isLiveActive;
 
   const toggleMode = () => {
     const next = mode === "LIVE" ? "MOCK" : "LIVE";
@@ -39,20 +95,40 @@ export function Header({ currentSection = "LIVE_OVERVIEW", eps = 142500 }: Heade
 
   return (
     <header className="fixed top-0 left-[250px] right-0 h-16 bg-white/95 backdrop-blur-md border-b border-[#E2E8F0] z-40 px-6 flex items-center justify-between">
-      {/* Left: Breadcrumbs & Live EPS */}
+      {/* Left: Breadcrumbs & Backend Status */}
       <div className="flex items-center gap-4">
         <nav className="flex items-center gap-1.5 text-[#64748B] font-mono text-[0.75rem] uppercase tracking-wider">
-          <span className="hover:text-[#1E293B] transition-colors cursor-pointer">SOC</span>
+          <span className="hover:text-[#1E293B] transition-colors cursor-pointer">
+            SOC
+          </span>
           <span>/</span>
-          <span className="hover:text-[#1E293B] transition-colors cursor-pointer">ULPF_CORE</span>
+          <span className="hover:text-[#1E293B] transition-colors cursor-pointer">
+            ULPF_CORE
+          </span>
           <span>/</span>
-          <span className="text-[#1E293B] font-semibold">{currentSection}</span>
+          <span className="text-[#1E293B] font-semibold">
+            {currentSection}
+          </span>
         </nav>
 
         <div className="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded bg-[#F0F3FF] border border-[#C5C6CA]/30">
-          <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span>
+          <span
+            className={`w-2 h-2 rounded-full ${isLiveActive
+                ? "bg-[#10B981] animate-pulse"
+                : isMock
+                  ? "bg-sky-500"
+                  : "bg-amber-500"
+              }`}
+          />
+
           <span className="font-mono text-[0.75rem] text-[#1E293B] font-medium">
-            INGESTING: {eps.toLocaleString("en-US")} EPS
+            {!mounted
+              ? "BACKEND OFFLINE"
+              : isMock
+                ? "MOCK MODE"
+                : isLiveActive
+                  ? `INGESTING: ${(eps ?? 0).toLocaleString("en-US")} EPS`
+                  : "BACKEND OFFLINE"}
           </span>
         </div>
       </div>
@@ -62,29 +138,38 @@ export function Header({ currentSection = "LIVE_OVERVIEW", eps = 142500 }: Heade
         {/* Live vs Mock Mode Switcher */}
         <button
           onClick={toggleMode}
-          title={`Click to switch to ${mode === "LIVE" ? "MOCK FIXTURE" : "LIVE BACKEND"} mode`}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[0.75rem] font-mono font-semibold transition-all border shadow-sm ${mode === "LIVE"
-              ? backendOnline
-                ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
-                : "bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100"
-              : "bg-sky-50 text-sky-700 border-sky-300 hover:bg-sky-100"
+          title={`Click to switch to ${mode === "LIVE" ? "MOCK" : "LIVE"
+            } mode`}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[0.75rem] font-mono font-semibold transition-all border shadow-sm ${!mounted
+              ? "bg-amber-50 text-amber-800 border-amber-300"
+              : mode === "LIVE"
+                ? isLiveActive
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
+                  : "bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100"
+                : "bg-sky-50 text-sky-700 border-sky-300 hover:bg-sky-100"
             }`}
         >
           <span
-            className={`w-2 h-2 rounded-full ${mode === "LIVE"
-                ? backendOnline
-                  ? "bg-emerald-500 animate-pulse"
-                  : "bg-amber-500"
-                : "bg-sky-500"
+            className={`w-2 h-2 rounded-full ${!mounted
+                ? "bg-amber-500"
+                : mode === "LIVE"
+                  ? isLiveActive
+                    ? "bg-emerald-500 animate-pulse"
+                    : "bg-amber-500"
+                  : "bg-sky-500"
               }`}
           />
+
           <span>
-            {mode === "LIVE"
-              ? backendOnline
-                ? "LIVE API (8080)"
-                : "LIVE API (UNREACHABLE)"
-              : "FIXTURE MODE"}
+            {!mounted
+              ? "OFFLINE (8080)"
+              : mode === "LIVE"
+                ? isLiveActive
+                  ? "LIVE API (8080)"
+                  : "OFFLINE (8080)"
+                : "MOCK"}
           </span>
+
           <RefreshCw className="w-3 h-3 ml-0.5 opacity-60" />
         </button>
 
@@ -107,6 +192,7 @@ export function Header({ currentSection = "LIVE_OVERVIEW", eps = 142500 }: Heade
         {/* Search Input */}
         <div className="relative hidden lg:block w-52">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
+
           <input
             type="text"
             placeholder="Filter stream (regex, OCSF)..."
@@ -117,7 +203,8 @@ export function Header({ currentSection = "LIVE_OVERVIEW", eps = 142500 }: Heade
         {/* Notifications */}
         <div className="relative flex items-center justify-center p-1.5 rounded text-[#64748B] hover:text-[#1E293B] hover:bg-[#E2E4E8] cursor-pointer">
           <Bell className="w-5 h-5" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-[#FF5C5C] rounded-full ring-2 ring-white"></span>
+
+          <span className="absolute top-1 right-1 w-2 h-2 bg-[#FF5C5C] rounded-full ring-2 ring-white" />
         </div>
 
         {/* User Avatar */}

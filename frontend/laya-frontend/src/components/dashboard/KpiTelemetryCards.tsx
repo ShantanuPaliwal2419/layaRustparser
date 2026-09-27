@@ -4,13 +4,149 @@ import { MetricsResponse } from "@/lib/types";
 import { TrendingUp, ArrowDown } from "lucide-react";
 
 interface KpiTelemetryCardsProps {
-  metrics: MetricsResponse;
+  metrics: MetricsResponse | null;
   epsHistory?: number[];
+  status?: "LIVE" | "MOCK" | "OFFLINE" | "STALE";
 }
 
-export function KpiTelemetryCards({ metrics, epsHistory = [] }: KpiTelemetryCardsProps) {
+export function KpiTelemetryCards({
+  metrics,
+  epsHistory = [],
+  status = "LIVE",
+}: KpiTelemetryCardsProps) {
+  if (!metrics || status === "OFFLINE") {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {/* Card 1: Total EPS */}
+        <div className="flex flex-col justify-between bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm">
+          <div className="flex items-start justify-between">
+            <div className="flex flex-col">
+              <span className="font-mono text-[0.6875rem] text-[#64748B] uppercase tracking-wider">
+                TOTAL EPS (Throughput)
+              </span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-[2.25rem] text-[#94A3B8] font-semibold leading-tight">
+                  —
+                </span>
+                <span className="font-mono text-[0.75rem] text-[#94A3B8]">EPS</span>
+              </div>
+            </div>
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 font-mono text-[0.6875rem] font-semibold border border-amber-200">
+              OFFLINE
+            </span>
+          </div>
+
+          <div className="my-2 py-1 flex items-center justify-center h-8 bg-[#F8FAFC] rounded border border-dashed border-[#CBD5E1]">
+            <span className="font-mono text-[0.75rem] text-[#64748B]">Metrics unavailable</span>
+          </div>
+
+          <div className="flex items-center justify-between text-[#64748B] font-mono text-[0.75rem] pt-1 border-t border-[#F1F5F9]">
+            <span>Backend is not responding</span>
+            <span className="text-amber-700 font-medium">DISCONNECTED</span>
+          </div>
+        </div>
+
+        {/* Card 2: Latency P50 */}
+        <div className="flex flex-col justify-between bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm">
+          <div className="flex items-start justify-between">
+            <div className="flex flex-col">
+              <span className="font-mono text-[0.6875rem] text-[#64748B] uppercase tracking-wider">
+                LATENCY P50 (Engine)
+              </span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-[2.25rem] text-[#94A3B8] font-semibold leading-tight">
+                  —
+                </span>
+                <span className="font-mono text-[0.75rem] text-[#94A3B8]">µs</span>
+              </div>
+            </div>
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 font-mono text-[0.6875rem] font-semibold border border-amber-200">
+              OFFLINE
+            </span>
+          </div>
+
+          <div className="my-2 py-1 flex items-center justify-center h-8 bg-[#F8FAFC] rounded border border-dashed border-[#CBD5E1]">
+            <span className="font-mono text-[0.75rem] text-[#64748B]">Metrics unavailable</span>
+          </div>
+
+          <div className="flex items-center justify-between text-[#64748B] font-mono text-[0.75rem] pt-1 border-t border-[#F1F5F9]">
+            <span>Target: &lt;50.0 µs</span>
+            <span className="text-[#94A3B8] font-medium">P99: —</span>
+          </div>
+        </div>
+
+        {/* Card 3: LRU Cache Hit Rate */}
+        <div className="flex flex-col justify-between bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm">
+          <div className="flex items-start justify-between">
+            <div className="flex flex-col">
+              <span className="font-mono text-[0.6875rem] text-[#64748B] uppercase tracking-wider">
+                LRU CACHE HIT RATE
+              </span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-[2.25rem] text-[#94A3B8] font-semibold leading-tight">
+                  —
+                </span>
+                <span className="font-mono text-[0.75rem] text-[#94A3B8]">%</span>
+              </div>
+            </div>
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 font-mono text-[0.6875rem] font-semibold border border-amber-200">
+              OFFLINE
+            </span>
+          </div>
+
+          <div className="my-2 py-1 flex items-center justify-center h-8 bg-[#F8FAFC] rounded border border-dashed border-[#CBD5E1]">
+            <span className="font-mono text-[0.75rem] text-[#64748B]">Metrics unavailable</span>
+          </div>
+
+          <div className="flex items-center justify-between text-[#64748B] font-mono text-[0.75rem] pt-1 border-t border-[#F1F5F9]">
+            <span>Drain3 Cluster Hits</span>
+            <span className="text-[#94A3B8] font-medium">Evictions: —</span>
+          </div>
+        </div>
+
+        {/* Card 4: Ring Queue Depth */}
+        <div className="flex flex-col justify-between bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm">
+          <div className="flex items-start justify-between">
+            <div className="flex flex-col">
+              <span className="font-mono text-[0.6875rem] text-[#64748B] uppercase tracking-wider">
+                QUEUE DEPTH (RingBuffer)
+              </span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-[2.25rem] text-[#94A3B8] font-semibold leading-tight">
+                  —
+                </span>
+                <span className="font-mono text-[0.75rem] text-[#94A3B8]">
+                  / —
+                </span>
+              </div>
+            </div>
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 font-mono text-[0.6875rem] font-semibold border border-amber-200">
+              OFFLINE
+            </span>
+          </div>
+
+          <div className="my-2 py-1 flex items-center justify-center h-8 bg-[#F8FAFC] rounded border border-dashed border-[#CBD5E1]">
+            <span className="font-mono text-[0.75rem] text-[#64748B]">Metrics unavailable</span>
+          </div>
+
+          <div className="flex items-center justify-between text-[#64748B] font-mono text-[0.75rem] pt-1 border-t border-[#F1F5F9]">
+            <span>RingBuffer: Offline</span>
+            <span className="text-amber-700 font-medium">DISCONNECTED</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Sparkline coordinates from history
-  const points = epsHistory.length >= 2 ? epsHistory.slice(-10) : [138000, 140200, 139500, 141000, 142500];
+  const points =
+    epsHistory.length >= 2
+      ? epsHistory.slice(-10)
+      : epsHistory.length === 1
+      ? [epsHistory[0], epsHistory[0]]
+      : metrics.eps > 0
+      ? [metrics.eps, metrics.eps]
+      : [0, 0];
   const minVal = Math.min(...points) * 0.98;
   const maxVal = Math.max(...points) * 1.02;
   const range = maxVal - minVal || 1;
