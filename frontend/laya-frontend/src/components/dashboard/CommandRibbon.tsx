@@ -7,10 +7,17 @@ interface CommandRibbonProps {
   onSync: () => void;
   isPolling?: boolean;
   isLive?: boolean;
+  status?: "LIVE" | "MOCK" | "OFFLINE" | "STALE";
 }
 
-export function CommandRibbon({ onSync, isPolling = true, isLive = true }: CommandRibbonProps) {
+export function CommandRibbon({
+  onSync,
+  isPolling = true,
+  isLive = true,
+  status,
+}: CommandRibbonProps) {
   const [syncing, setSyncing] = useState(false);
+  const currentStatus = status ?? (isLive ? "LIVE" : "MOCK");
 
   const handleSync = async () => {
     setSyncing(true);
@@ -37,19 +44,29 @@ export function CommandRibbon({ onSync, isPolling = true, isLive = true }: Comma
           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F0F3FF] text-[#009768] font-mono text-[0.75rem] border border-[#CBD5E1]/40">
             <span
               className={`w-2 h-2 rounded-full ${
-                isPolling ? "bg-[#009768] animate-pulse" : "bg-[#64748B]"
+                isPolling && currentStatus !== "OFFLINE"
+                  ? "bg-[#009768] animate-pulse"
+                  : "bg-[#64748B]"
               }`}
             ></span>
-            GET /metrics Polling: {isPolling ? "ACTIVE" : "PAUSED"} (Interval: 1,000ms)
+            GET /metrics Polling: {isPolling ? (currentStatus === "OFFLINE" ? "RETRYING" : "ACTIVE") : "PAUSED"} (Interval: 1,000ms)
           </span>
           <span
             className={`inline-flex items-center px-2 py-0.5 rounded font-mono text-[0.6875rem] font-semibold border ${
-              isLive
+              currentStatus === "LIVE"
                 ? "bg-emerald-50 text-emerald-700 border-emerald-300"
-                : "bg-sky-50 text-sky-700 border-sky-300"
+                : currentStatus === "MOCK"
+                ? "bg-sky-50 text-sky-700 border-sky-300"
+                : "bg-amber-50 text-amber-800 border-amber-300"
             }`}
           >
-            {isLive ? "LIVE STREAM" : "FIXTURE REPLAY"}
+            {currentStatus === "LIVE"
+              ? "LIVE STREAM"
+              : currentStatus === "MOCK"
+              ? "MOCK"
+              : currentStatus === "STALE"
+              ? "STALE"
+              : "OFFLINE"}
           </span>
         </div>
       </div>

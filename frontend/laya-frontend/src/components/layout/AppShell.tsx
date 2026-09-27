@@ -7,7 +7,7 @@ import { Header } from "./Header";
 interface AppShellProps {
   children: React.ReactNode;
   currentSection?: string;
-  eps?: number;
+  eps?: number | null;
 }
 
 export function AppShell({ children, currentSection, eps }: AppShellProps) {

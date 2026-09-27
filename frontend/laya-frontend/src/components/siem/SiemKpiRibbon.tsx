@@ -4,15 +4,17 @@ import { AlertTriangle, Timer, ShieldCheck, Lock } from "lucide-react";
 import { AlertItem } from "@/lib/types";
 
 interface SiemKpiRibbonProps {
-  alerts: AlertItem[];
+  alerts: AlertItem[] | null;
 }
 
 export function SiemKpiRibbon({ alerts }: SiemKpiRibbonProps) {
-  const criticalCount = alerts.filter(
+  const isAvailable = !!alerts;
+  const alertList = alerts ?? [];
+  const criticalCount = alertList.filter(
     (a) => a.severity === "Critical" || a.severity === "High"
   ).length;
-  const mediumCount = alerts.filter((a) => a.severity === "Medium").length;
-  const tamperCount = alerts.filter((a) => a.alert_type === "tamper_alarm").length;
+  const mediumCount = alertList.filter((a) => a.severity === "Medium").length;
+  const tamperCount = alertList.filter((a) => a.alert_type === "tamper_alarm").length;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -27,15 +29,21 @@ export function SiemKpiRibbon({ alerts }: SiemKpiRibbonProps) {
         </div>
         <div className="flex items-baseline gap-2">
           <span className="text-[2.25rem] text-[#1E293B] font-semibold leading-tight">
-            {alerts.length}
+            {isAvailable ? alerts.length : "—"}
           </span>
-          <span className="font-mono text-[0.6875rem] px-2 py-0.5 rounded bg-[#FFDAD6] text-[#93000A] font-semibold">
-            {criticalCount} Critical, {mediumCount} Med
-          </span>
+          {isAvailable ? (
+            <span className="font-mono text-[0.6875rem] px-2 py-0.5 rounded bg-[#FFDAD6] text-[#93000A] font-semibold">
+              {criticalCount} Critical, {mediumCount} Med
+            </span>
+          ) : (
+            <span className="font-mono text-[0.6875rem] px-2 py-0.5 rounded bg-amber-50 text-amber-800 font-semibold border border-amber-300">
+              OFFLINE
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1.5 mt-2 text-[#64748B] font-mono text-[0.75rem]">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#BA1A1A]"></span>
-          <span>Priority queue requires action</span>
+          <span className={`w-1.5 h-1.5 rounded-full ${isAvailable ? "bg-[#BA1A1A]" : "bg-amber-500"}`}></span>
+          <span>{isAvailable ? "Priority queue requires action" : "Alerts unavailable — backend offline"}</span>
         </div>
       </div>
 

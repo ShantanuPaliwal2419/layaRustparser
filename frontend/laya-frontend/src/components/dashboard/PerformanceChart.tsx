@@ -7,12 +7,14 @@ interface PerformanceChartProps {
   history: TimeSeriesPoint[];
   onToggleJson?: () => void;
   showJson?: boolean;
+  status?: "LIVE" | "MOCK" | "OFFLINE" | "STALE";
 }
 
 export function PerformanceChart({
   history,
   onToggleJson,
   showJson = false,
+  status = "LIVE",
 }: PerformanceChartProps) {
   // SVG canvas dimensions
   const width = 800;
@@ -22,7 +24,10 @@ export function PerformanceChart({
   const points =
     history.length >= 2
       ? history
-      : [
+      : history.length === 1
+      ? [{ ...history[0], time: "-10s" }, history[0]]
+      : status === "MOCK"
+      ? [
           { time: "-60s", eps: 141000, latency_p50: 1.35 },
           { time: "-50s", eps: 141500, latency_p50: 1.3 },
           { time: "-40s", eps: 142000, latency_p50: 1.34 },
@@ -30,6 +35,10 @@ export function PerformanceChart({
           { time: "-20s", eps: 142200, latency_p50: 1.26 },
           { time: "-10s", eps: 142400, latency_p50: 1.29 },
           { time: "0s", eps: 142500, latency_p50: 1.28 },
+        ]
+      : [
+          { time: "-10s", eps: 0, latency_p50: 0 },
+          { time: "0s", eps: 0, latency_p50: 0 },
         ];
 
   // Scale calculations for EPS (range 120,000 - 160,000)
@@ -91,6 +100,16 @@ export function PerformanceChart({
 
       {/* SVG Canvas */}
       <div className="relative w-full h-64 bg-[#F0F3FF]/50 rounded-lg p-3 flex flex-col justify-between border border-[#E2E8F0]">
+        {status === "OFFLINE" && (
+          <div className="absolute inset-0 bg-white/85 backdrop-blur-[2px] rounded-lg flex flex-col items-center justify-center z-10 p-4">
+            <span className="font-mono text-[0.875rem] font-semibold text-amber-800">
+              Telemetry stream offline
+            </span>
+            <span className="font-mono text-[0.75rem] text-[#64748B] mt-1 text-center">
+              Backend is not responding on http://127.0.0.1:8080/metrics
+            </span>
+          </div>
+        )}
         <div className="flex justify-between text-[#64748B] font-mono text-[0.6875rem]">
           <span>160k EPS</span>
           <span>Target SLA Plateau (142.5k EPS)</span>
@@ -185,7 +204,15 @@ export function PerformanceChart({
           <span>-45s</span>
           <span>-30s</span>
           <span>-15s</span>
-          <span className="text-[#006398] font-semibold">T-00:00 (Live)</span>
+          <span className="text-[#006398] font-semibold">
+            {status === "LIVE"
+              ? "T-00:00 (Live)"
+              : status === "MOCK"
+              ? "T-00:00 (Mock)"
+              : status === "STALE"
+              ? "T-00:00 (Stale)"
+              : "T-00:00 (Offline)"}
+          </span>
         </div>
       </div>
 

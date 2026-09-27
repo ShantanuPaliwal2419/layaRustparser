@@ -4,20 +4,17 @@ import { Hand } from "lucide-react";
 import { MetricsResponse } from "@/lib/types";
 
 interface DispositionSplitProps {
-  metrics: MetricsResponse;
+  metrics: MetricsResponse | null;
 }
 
 export function DispositionSplit({ metrics }: DispositionSplitProps) {
-  const breakdown = metrics.disposition_breakdown || {
-    Allowed: 18240,
-    Blocked: 5610,
-    Dropped: 1150,
-  };
+  const isAvailable = !!metrics;
+  const breakdown = metrics?.disposition_breakdown || {};
 
   const allowedCount = breakdown.Allowed || 0;
   const blockedCount = breakdown.Blocked || 0;
   const droppedCount = breakdown.Dropped || 0;
-  const total = allowedCount + blockedCount + droppedCount || 25000;
+  const total = allowedCount + blockedCount + droppedCount || 1;
 
   const allowedPct = (allowedCount / total) * 100;
   const blockedPct = (blockedCount / total) * 100;
@@ -55,6 +52,12 @@ export function DispositionSplit({ metrics }: DispositionSplitProps) {
         </div>
 
         {/* Donut & Analytical Breakdown Matrix */}
+        {!isAvailable ? (
+          <div className="p-8 text-center text-[#64748B] font-mono text-[0.875rem] bg-[#F8FAFC] rounded-lg border border-dashed border-[#CBD5E1] my-4">
+            <p className="text-amber-800 font-semibold mb-1">Breakdown unavailable</p>
+            <p className="text-[#64748B] text-[0.75rem]">Backend is not responding on http://127.0.0.1:8080/metrics</p>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 items-center gap-4 py-2">
           {/* Inline Donut Visualization */}
           <div className="flex flex-col items-center justify-center relative">
@@ -163,6 +166,7 @@ export function DispositionSplit({ metrics }: DispositionSplitProps) {
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* Enforcement Note Banner */}

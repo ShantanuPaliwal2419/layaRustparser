@@ -7,7 +7,7 @@ import {
 
 // Mirrors data/fixtures/api/metrics.json
 export const mockMetrics: MetricsResponse = {
-  eps: 142500.0,
+  eps: 142560.0,
   latency_p50_micros: 1.28,
   latency_p99_micros: 4.12,
   queue_depth: 0,

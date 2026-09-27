@@ -4,7 +4,7 @@ import { Shield, CheckCircle } from "lucide-react";
 import { MetricsResponse } from "@/lib/types";
 
 interface VendorMixProps {
-  metrics: MetricsResponse;
+  metrics: MetricsResponse | null;
 }
 
 interface VendorDisplayItem {
@@ -54,8 +54,9 @@ const vendorsList: VendorDisplayItem[] = [
 ];
 
 export function VendorMix({ metrics }: VendorMixProps) {
-  const vendorMix = metrics.vendor_mix || {};
-  const totalLogs = metrics.total_ingested > 0 ? metrics.total_ingested : 1425000;
+  const isAvailable = !!metrics;
+  const vendorMix = metrics?.vendor_mix || {};
+  const totalLogs = isAvailable ? metrics.total_ingested : 0;
 
   return (
     <div className="bg-white border border-[#E2E8F0] p-5 rounded-xl shadow-sm flex flex-col justify-between h-full">
@@ -80,7 +81,13 @@ export function VendorMix({ metrics }: VendorMixProps) {
         </div>
 
         {/* Vendor Breakdown Bars */}
-        <div className="flex flex-col gap-4 mt-2">
+        {!isAvailable ? (
+          <div className="p-8 text-center text-[#64748B] font-mono text-[0.875rem] bg-[#F8FAFC] rounded-lg border border-dashed border-[#CBD5E1] my-4">
+            <p className="text-amber-800 font-semibold mb-1">Metrics unavailable</p>
+            <p className="text-[#64748B] text-[0.75rem]">Backend is not responding on http://127.0.0.1:8080/metrics</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4 mt-2">
           {vendorsList.map((vendor) => {
             const rawPct = vendorMix[vendor.id];
             const pct = typeof rawPct === "number" ? rawPct : vendor.defaultPct;
@@ -112,6 +119,7 @@ export function VendorMix({ metrics }: VendorMixProps) {
             );
           })}
         </div>
+        )}
       </div>
 
       {/* Verification Assurance Footer */}

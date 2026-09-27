@@ -4,11 +4,16 @@ import { Database, ShieldCheck, ShieldAlert, ArrowUp } from "lucide-react";
 import { MetricsResponse } from "@/lib/types";
 
 interface HeroMetricsProps {
-  metrics: MetricsResponse;
+  metrics: MetricsResponse | null;
 }
 
 export function HeroMetrics({ metrics }: HeroMetricsProps) {
-  const totalDisplay = metrics.total_ingested > 0 ? metrics.total_ingested.toLocaleString("en-US") : "1,425,000";
+  const isAvailable = !!metrics;
+  const totalDisplay = isAvailable && metrics.total_ingested > 0
+    ? metrics.total_ingested.toLocaleString("en-US")
+    : isAvailable
+    ? "0"
+    : "—";
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -33,7 +38,7 @@ export function HeroMetrics({ metrics }: HeroMetricsProps) {
           </span>
         </div>
         <div className="flex items-center justify-between text-[#64748B] font-mono text-[0.6875rem] pt-1 border-t border-[#F1F5F9]">
-          <span>RATE: ~{metrics.eps > 0 ? (metrics.eps / 1000).toFixed(1) : "142.5"}k EPS STABLE</span>
+          <span>RATE: ~{isAvailable ? (metrics.eps > 0 ? (metrics.eps / 1000).toFixed(1) : "0.0") : "—"}k EPS STABLE</span>
           <span className="text-[#0284C7] font-semibold">PARQUET SYNC ACTIVE</span>
         </div>
       </div>

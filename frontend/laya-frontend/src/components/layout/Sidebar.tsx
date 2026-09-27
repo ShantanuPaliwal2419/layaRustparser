@@ -134,9 +134,8 @@ export function Sidebar() {
                   </div>
                   {item.badge && (
                     <span
-                      className={`text-[0.6875rem] font-mono px-1.5 py-0.5 rounded border ${
-                        item.badgeColor || "bg-white text-[#64748B] border-[#CBD5E1]"
-                      }`}
+                      className={`text-[0.6875rem] font-mono px-1.5 py-0.5 rounded border ${item.badgeColor || "bg-white text-[#64748B] border-[#CBD5E1]"
+                        }`}
                     >
                       {item.badge}
                     </span>
@@ -149,31 +148,27 @@ export function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`group flex items-center justify-between px-3 py-2 rounded transition-colors ${
-                  isActive
+                className={`group flex items-center justify-between px-3 py-2 rounded transition-colors ${isActive
                     ? "bg-white text-[#0284C7] font-semibold border border-[#CBD5E1] shadow-sm"
                     : "text-[#475569] hover:bg-[#D8DCE2] hover:text-[#1E293B]"
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-2.5">
                   <Icon
-                    className={`w-4 h-4 ${
-                      isActive ? "text-[#0284C7]" : "text-[#64748B] group-hover:text-[#1E293B]"
-                    }`}
+                    className={`w-4 h-4 ${isActive ? "text-[#0284C7]" : "text-[#64748B] group-hover:text-[#1E293B]"
+                      }`}
                   />
                   <span
-                    className={`text-[0.875rem] ${
-                      isActive ? "text-[#1E293B] font-semibold" : ""
-                    }`}
+                    className={`text-[0.875rem] ${isActive ? "text-[#1E293B] font-semibold" : ""
+                      }`}
                   >
                     {item.name}
                   </span>
                 </div>
                 {item.badge && (
                   <span
-                    className={`text-[0.6875rem] font-mono px-1.5 py-0.5 rounded border ${
-                      item.badgeColor || "bg-white text-[#0284C7] border-[#CBD5E1]"
-                    }`}
+                    className={`text-[0.6875rem] font-mono px-1.5 py-0.5 rounded border ${item.badgeColor || "bg-white text-[#0284C7] border-[#CBD5E1]"
+                      }`}
                   >
                     {item.badge}
                   </span>
@@ -192,14 +187,7 @@ export function Sidebar() {
             ulpf-engine:stable
           </span>
         </div>
-        <div className="flex items-center justify-between px-2 text-[#64748B]">
-          <span className="text-[0.6875rem] font-mono uppercase tracking-wider">
-            CLUSTER
-          </span>
-          <span className="text-[0.75rem] font-mono text-[#0284C7] font-semibold">
-            US-EAST-PRIMARY
-          </span>
-        </div>
+
       </div>
     </aside>
   );

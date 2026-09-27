@@ -6,17 +6,21 @@ import { AlertItem, AlertSeverity } from "@/lib/types";
 import { AlertTriangle, RefreshCw, ArrowRight } from "lucide-react";
 
 interface AlertFeedProps {
-  alerts: AlertItem[];
+  alerts: AlertItem[] | null;
   onRefresh?: () => void;
+  status?: "LIVE" | "MOCK" | "OFFLINE" | "STALE";
 }
 
-export function AlertFeed({ alerts, onRefresh }: AlertFeedProps) {
+export function AlertFeed({ alerts, onRefresh, status = "LIVE" }: AlertFeedProps) {
   const [filterSeverity, setFilterSeverity] = useState<AlertSeverity | "ALL">("ALL");
+
+  const isOffline = alerts === null || status === "OFFLINE";
+  const alertList = alerts ?? [];
 
   const filteredAlerts =
     filterSeverity === "ALL"
-      ? alerts
-      : alerts.filter((a) => a.severity.toLowerCase() === filterSeverity.toLowerCase());
+      ? alertList
+      : alertList.filter((a) => a.severity.toLowerCase() === filterSeverity.toLowerCase());
 
   return (
     <div className="flex flex-col bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm">
@@ -31,9 +35,15 @@ export function AlertFeed({ alerts, onRefresh }: AlertFeedProps) {
               <span className="text-[1.125rem] text-[#1E293B] font-semibold">
                 Active Security Alerts Feed
               </span>
-              <span className="font-mono text-[0.6875rem] px-2 py-0.5 rounded-full bg-[#BA1A1A] text-white font-semibold">
-                {alerts.length} In Flight
-              </span>
+              {isOffline ? (
+                <span className="font-mono text-[0.6875rem] px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 font-semibold border border-amber-300">
+                  FEED OFFLINE
+                </span>
+              ) : (
+                <span className="font-mono text-[0.6875rem] px-2 py-0.5 rounded-full bg-[#BA1A1A] text-white font-semibold">
+                  {alertList.length} In Flight
+                </span>
+              )}
             </div>
             <span className="font-mono text-[0.75rem] text-[#64748B]">
               Mapped contract: Endpoint GET /alerts (Evaluation Cycle: 100ms)
@@ -72,7 +82,12 @@ export function AlertFeed({ alerts, onRefresh }: AlertFeedProps) {
 
       {/* Alert Items Container */}
       <div className="flex flex-col gap-3 mt-3">
-        {filteredAlerts.length === 0 ? (
+        {isOffline ? (
+          <div className="p-8 text-center text-[#64748B] font-mono text-[0.875rem] bg-[#F8FAFC] rounded-lg border border-dashed border-[#CBD5E1]">
+            <p className="text-amber-800 font-semibold mb-1">Alerts unavailable</p>
+            <p className="text-[#64748B] text-[0.75rem]">Backend is not responding on http://127.0.0.1:8080/alerts</p>
+          </div>
+        ) : filteredAlerts.length === 0 ? (
           <div className="p-8 text-center text-[#64748B] font-mono text-[0.875rem] bg-[#F8FAFC] rounded-lg border border-dashed border-[#CBD5E1]">
             No alerts detected matching current filter criteria.
           </div>

@@ -26,13 +26,11 @@ export function Header({
 
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
   const [timeRange, setTimeRange] = useState<"15m" | "1h" | "24h">("1h");
-  const [mounted, setMounted] = useState(false);
-
-  // Keep server render and initial client render identical.
-  // Actual backend/mode state is resolved only after hydration.
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(
+    () => () => { },
+    () => true,
+    () => false
+  );
 
   useEffect(() => {
     if (!mounted) return;
@@ -86,7 +84,7 @@ export function Header({
     (eps != null || backendOnline === true);
 
   const isMock = mounted && displayMode === "MOCK";
-  const isOffline = mounted && displayMode === "LIVE" && !isLiveActive;
+
 
   const toggleMode = () => {
     const next = mode === "LIVE" ? "MOCK" : "LIVE";
@@ -114,10 +112,10 @@ export function Header({
         <div className="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded bg-[#F0F3FF] border border-[#C5C6CA]/30">
           <span
             className={`w-2 h-2 rounded-full ${isLiveActive
-                ? "bg-[#10B981] animate-pulse"
-                : isMock
-                  ? "bg-sky-500"
-                  : "bg-amber-500"
+              ? "bg-[#10B981] animate-pulse"
+              : isMock
+                ? "bg-sky-500"
+                : "bg-amber-500"
               }`}
           />
 
@@ -141,22 +139,22 @@ export function Header({
           title={`Click to switch to ${mode === "LIVE" ? "MOCK" : "LIVE"
             } mode`}
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[0.75rem] font-mono font-semibold transition-all border shadow-sm ${!mounted
-              ? "bg-amber-50 text-amber-800 border-amber-300"
-              : mode === "LIVE"
-                ? isLiveActive
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
-                  : "bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100"
-                : "bg-sky-50 text-sky-700 border-sky-300 hover:bg-sky-100"
+            ? "bg-amber-50 text-amber-800 border-amber-300"
+            : mode === "LIVE"
+              ? isLiveActive
+                ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
+                : "bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100"
+              : "bg-sky-50 text-sky-700 border-sky-300 hover:bg-sky-100"
             }`}
         >
           <span
             className={`w-2 h-2 rounded-full ${!mounted
-                ? "bg-amber-500"
-                : mode === "LIVE"
-                  ? isLiveActive
-                    ? "bg-emerald-500 animate-pulse"
-                    : "bg-amber-500"
-                  : "bg-sky-500"
+              ? "bg-amber-500"
+              : mode === "LIVE"
+                ? isLiveActive
+                  ? "bg-emerald-500 animate-pulse"
+                  : "bg-amber-500"
+                : "bg-sky-500"
               }`}
           />
 
@@ -180,8 +178,8 @@ export function Header({
               key={t}
               onClick={() => setTimeRange(t)}
               className={`px-2 py-0.5 font-mono text-[0.75rem] rounded transition-colors ${timeRange === t
-                  ? "bg-white text-[#1E293B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-                  : "text-[#64748B] hover:text-[#1E293B]"
+                ? "bg-white text-[#1E293B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+                : "text-[#64748B] hover:text-[#1E293B]"
                 }`}
             >
               {t}

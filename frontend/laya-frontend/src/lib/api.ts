@@ -51,7 +51,8 @@ export async function checkBackendReachable(): Promise<boolean> {
 
 /**
  * Fetches metrics from GET /metrics.
- * If backend fails or mode is MOCK, falls back to fixture data.
+ * In LIVE mode: calls backend and returns real metrics, or throws on failure.
+ * In MOCK mode: returns fixture data.
  */
 export async function getMetrics(): Promise<{
   data: MetricsResponse;
@@ -60,21 +61,19 @@ export async function getMetrics(): Promise<{
   const mode = getApiMode();
 
   if (mode === "LIVE") {
-    try {
-      const res = await fetch(`${API_BASE}/metrics`, {
-        method: "GET",
-        cache: "no-store",
-        headers: { Accept: "application/json" },
-        signal: AbortSignal.timeout(2000),
-      });
+    const res = await fetch(`${API_BASE}/metrics`, {
+      method: "GET",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(2000),
+    });
 
-      if (res.ok) {
-        const json: MetricsResponse = await res.json();
-        return { data: json, isLive: true };
-      }
-    } catch {
-      // Fallback below
+    if (!res.ok) {
+      throw new Error(`Failed to fetch metrics: HTTP ${res.status}`);
     }
+
+    const json: MetricsResponse = await res.json();
+    return { data: json, isLive: true };
   }
 
   return { data: mockMetrics, isLive: false };
@@ -82,6 +81,8 @@ export async function getMetrics(): Promise<{
 
 /**
  * Fetches active alerts from GET /alerts.
+ * In LIVE mode: calls backend and returns real alerts, or throws on failure.
+ * In MOCK mode: returns fixture data.
  */
 export async function getAlerts(): Promise<{
   data: AlertItem[];
@@ -90,21 +91,19 @@ export async function getAlerts(): Promise<{
   const mode = getApiMode();
 
   if (mode === "LIVE") {
-    try {
-      const res = await fetch(`${API_BASE}/alerts`, {
-        method: "GET",
-        cache: "no-store",
-        headers: { Accept: "application/json" },
-        signal: AbortSignal.timeout(2000),
-      });
+    const res = await fetch(`${API_BASE}/alerts`, {
+      method: "GET",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(2000),
+    });
 
-      if (res.ok) {
-        const json: AlertItem[] = await res.json();
-        return { data: json, isLive: true };
-      }
-    } catch {
-      // Fallback below
+    if (!res.ok) {
+      throw new Error(`Failed to fetch alerts: HTTP ${res.status}`);
     }
+
+    const json: AlertItem[] = await res.json();
+    return { data: json, isLive: true };
   }
 
   return { data: mockAlerts, isLive: false };
@@ -112,6 +111,8 @@ export async function getAlerts(): Promise<{
 
 /**
  * Fetches stored records for a block from GET /blocks/:id/records.
+ * In LIVE mode: calls backend and returns real records, or throws on failure.
+ * In MOCK mode: returns fixture data.
  */
 export async function getBlockRecords(
   blockId: number = 1,
@@ -125,32 +126,30 @@ export async function getBlockRecords(
   const mode = getApiMode();
 
   if (mode === "LIVE") {
-    try {
-      const query = new URLSearchParams();
-      if (params?.offset !== undefined) query.set("offset", params.offset.toString());
-      if (params?.limit !== undefined) query.set("limit", params.limit.toString());
-      if (params?.vendor) query.set("vendor", params.vendor);
-      if (params?.disposition) query.set("disposition", params.disposition);
+    const query = new URLSearchParams();
+    if (params?.offset !== undefined) query.set("offset", params.offset.toString());
+    if (params?.limit !== undefined) query.set("limit", params.limit.toString());
+    if (params?.vendor) query.set("vendor", params.vendor);
+    if (params?.disposition) query.set("disposition", params.disposition);
 
-      const qs = query.toString() ? `?${query.toString()}` : "";
-      const res = await fetch(`${API_BASE}/blocks/${blockId}/records${qs}`, {
-        method: "GET",
-        cache: "no-store",
-        headers: { Accept: "application/json" },
-        signal: AbortSignal.timeout(3000),
-      });
+    const qs = query.toString() ? `?${query.toString()}` : "";
+    const res = await fetch(`${API_BASE}/blocks/${blockId}/records${qs}`, {
+      method: "GET",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(3000),
+    });
 
-      if (res.ok) {
-        const json: BlockRecordsResponse = await res.json();
-        return {
-          data: json.records,
-          total: json.total_records_in_block,
-          isLive: true,
-        };
-      }
-    } catch {
-      // Fallback below
+    if (!res.ok) {
+      throw new Error(`Failed to fetch block records: HTTP ${res.status}`);
     }
+
+    const json: BlockRecordsResponse = await res.json();
+    return {
+      data: json.records,
+      total: json.total_records_in_block,
+      isLive: true,
+    };
   }
 
   return {
@@ -162,6 +161,8 @@ export async function getBlockRecords(
 
 /**
  * Fetches blocks ledger from GET /blocks.
+ * In LIVE mode: calls backend and returns real blocks, or throws on failure.
+ * In MOCK mode: returns fixture data.
  */
 export async function getBlocks(): Promise<{
   data: BlockItem[];
@@ -170,21 +171,19 @@ export async function getBlocks(): Promise<{
   const mode = getApiMode();
 
   if (mode === "LIVE") {
-    try {
-      const res = await fetch(`${API_BASE}/blocks`, {
-        method: "GET",
-        cache: "no-store",
-        headers: { Accept: "application/json" },
-        signal: AbortSignal.timeout(2000),
-      });
+    const res = await fetch(`${API_BASE}/blocks`, {
+      method: "GET",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(2000),
+    });
 
-      if (res.ok) {
-        const json: BlockItem[] = await res.json();
-        return { data: json, isLive: true };
-      }
-    } catch {
-      // Fallback below
+    if (!res.ok) {
+      throw new Error(`Failed to fetch blocks: HTTP ${res.status}`);
     }
+
+    const json: BlockItem[] = await res.json();
+    return { data: json, isLive: true };
   }
 
   return {

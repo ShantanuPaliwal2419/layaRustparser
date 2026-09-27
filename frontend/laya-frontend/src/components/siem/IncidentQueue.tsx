@@ -4,12 +4,15 @@ import { AlertItem } from "@/lib/types";
 import { ArrowRight, ExternalLink, Filter, Download } from "lucide-react";
 
 interface IncidentQueueProps {
-  alerts: AlertItem[];
+  alerts: AlertItem[] | null;
   selectedId: string | null;
   onSelect: (alert: AlertItem) => void;
 }
 
 export function IncidentQueue({ alerts, selectedId, onSelect }: IncidentQueueProps) {
+  const isAvailable = !!alerts;
+  const alertList = alerts ?? [];
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-[#CBD5E1] overflow-hidden">
       {/* Header */}
@@ -18,9 +21,15 @@ export function IncidentQueue({ alerts, selectedId, onSelect }: IncidentQueuePro
           <span className="text-[1.125rem] text-[#1E293B] font-semibold tracking-tight">
             Active Incident Queue
           </span>
-          <span className="font-mono text-[0.75rem] px-2.5 py-0.5 rounded-full bg-[#1A1D20] text-white">
-            {alerts.length} CONTRACT ENTITIES
-          </span>
+          {isAvailable ? (
+            <span className="font-mono text-[0.75rem] px-2.5 py-0.5 rounded-full bg-[#1A1D20] text-white">
+              {alerts.length} CONTRACT ENTITIES
+            </span>
+          ) : (
+            <span className="font-mono text-[0.75rem] px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 font-semibold border border-amber-300">
+              QUEUE OFFLINE
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -32,7 +41,7 @@ export function IncidentQueue({ alerts, selectedId, onSelect }: IncidentQueuePro
           </button>
           <button
             onClick={() => {
-              const blob = new Blob([JSON.stringify(alerts, null, 2)], {
+              const blob = new Blob([JSON.stringify(alertList, null, 2)], {
                 type: "application/json",
               });
               const url = URL.createObjectURL(blob);
@@ -65,7 +74,21 @@ export function IncidentQueue({ alerts, selectedId, onSelect }: IncidentQueuePro
             </tr>
           </thead>
           <tbody className="text-[#1E293B] text-[0.875rem] divide-y divide-[#F1F5F9]">
-            {alerts.map((alert) => {
+            {!isAvailable ? (
+              <tr>
+                <td colSpan={7} className="py-8 text-center text-[#64748B] font-mono text-[0.875rem]">
+                  <p className="text-amber-800 font-semibold mb-1">Queue unavailable</p>
+                  <p className="text-[#64748B] text-[0.75rem]">Backend is not responding on http://127.0.0.1:8080/alerts</p>
+                </td>
+              </tr>
+            ) : alertList.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="py-8 text-center text-[#64748B] font-mono text-[0.875rem]">
+                  No active security incidents found.
+                </td>
+              </tr>
+            ) : (
+              alertList.map((alert) => {
               const isSelected = selectedId === alert.id;
               const isCrit =
                 alert.severity === "Critical" || alert.severity === "High";
@@ -186,7 +209,8 @@ export function IncidentQueue({ alerts, selectedId, onSelect }: IncidentQueuePro
                   </td>
                 </tr>
               );
-            })}
+            })
+            )}
           </tbody>
         </table>
       </div>

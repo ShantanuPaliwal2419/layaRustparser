@@ -6,7 +6,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { SiemKpiRibbon } from "@/components/siem/SiemKpiRibbon";
 import { IncidentQueue } from "@/components/siem/IncidentQueue";
 import { ForensicWorkspace } from "@/components/siem/ForensicWorkspace";
-import { getAlerts } from "@/lib/api";
+import { getAlerts, getApiMode } from "@/lib/api";
 import { AlertItem } from "@/lib/types";
 import { mockAlerts } from "@/lib/mock-data";
 import { Zap } from "lucide-react";
@@ -15,17 +15,34 @@ function SiemAlertingContent() {
   const searchParams = useSearchParams();
   const selectedParam = searchParams.get("selected");
 
-  const [alerts, setAlerts] = useState<AlertItem[]>(mockAlerts);
+  const [alerts, setAlerts] = useState<AlertItem[] | null>(null);
   const [selectedAlert, setSelectedAlert] = useState<AlertItem | null>(null);
+  const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
-    let ignore = false;
+    let active = true;
+    let timerId: NodeJS.Timeout | null = null;
 
     async function loadData() {
+      const mode = getApiMode();
+      if (mode === "MOCK") {
+        setAlerts(mockAlerts);
+        setIsLive(false);
+        setSelectedAlert((current) => {
+          if (current) return current;
+          if (selectedParam) {
+            const found = mockAlerts.find((a) => a.id === selectedParam);
+            if (found) return found;
+          }
+          return mockAlerts[0] || null;
+        });
+        return;
+      }
       try {
         const alertsRes = await getAlerts();
-        if (ignore) return;
+        if (!active) return;
         setAlerts(alertsRes.data);
+        setIsLive(alertsRes.isLive);
 
         // If no alert selected yet, default to the one from query param or first critical alert
         setSelectedAlert((current) => {
@@ -37,15 +54,25 @@ function SiemAlertingContent() {
           return alertsRes.data[0] || null;
         });
       } catch {
-        // Keep last known
+        if (!active) return;
+        setIsLive(false);
+        setAlerts(null);
+        setSelectedAlert(null);
       }
     }
 
-    loadData();
-    const interval = setInterval(loadData, 1000);
+    async function pollLoop() {
+      if (!active) return;
+      await loadData();
+      if (!active) return;
+      timerId = setTimeout(pollLoop, 1000);
+    }
+
+    pollLoop();
+
     return () => {
-      ignore = true;
-      clearInterval(interval);
+      active = false;
+      if (timerId) clearTimeout(timerId);
     };
   }, [selectedParam]);
 
@@ -69,10 +96,18 @@ function SiemAlertingContent() {
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F0F3FF] border border-[#CBD5E1] shadow-sm">
-            <span className="inline-block w-2 h-2 rounded-full bg-[#009768] animate-pulse"></span>
+            <span
+              className={`inline-block w-2 h-2 rounded-full ${
+                isLive
+                  ? "bg-[#009768] animate-pulse"
+                  : getApiMode() === "MOCK"
+                  ? "bg-sky-500"
+                  : "bg-amber-500"
+              }`}
+            ></span>
             <span className="font-mono text-[0.75rem] text-[#1E293B]">
               Endpoint: <code className="font-semibold text-[#006398]">GET /alerts</code>{" "}
-              (Polling 1s)
+              ({isLive ? "LIVE" : getApiMode() === "MOCK" ? "MOCK" : "OFFLINE"})
             </span>
           </div>
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F0F3FF] border border-[#CBD5E1] shadow-sm">

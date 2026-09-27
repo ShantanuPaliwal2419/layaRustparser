@@ -7,11 +7,13 @@ import Link from "next/link";
 
 interface OcsfStreamTableProps {
   records: StoredRecordItem[];
+  status?: "LIVE" | "MOCK" | "OFFLINE" | "STALE";
 }
 
-export function OcsfStreamTable({ records }: OcsfStreamTableProps) {
+export function OcsfStreamTable({ records, status = "LIVE" }: OcsfStreamTableProps) {
   const [selectedRecord, setSelectedRecord] = useState<StoredRecordItem | null>(null);
   const [copied, setCopied] = useState(false);
+  const isOffline = status === "OFFLINE";
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -36,9 +38,15 @@ export function OcsfStreamTable({ records }: OcsfStreamTableProps) {
         </div>
         <div className="flex items-center gap-2">
           <span className="font-mono text-[0.75rem] text-[#64748B]">
-            Showing latest {records.length} buffered frames
+            {isOffline && records.length === 0
+              ? "Stream disconnected"
+              : `Showing latest ${records.length} buffered frames`}
           </span>
-          <span className="w-2 h-2 rounded-full bg-[#009768] animate-ping"></span>
+          <span
+            className={`w-2 h-2 rounded-full ${
+              isOffline ? "bg-amber-500" : "bg-[#009768] animate-ping"
+            }`}
+          ></span>
         </div>
       </div>
 
@@ -56,7 +64,27 @@ export function OcsfStreamTable({ records }: OcsfStreamTableProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#F1F5F9]">
-            {records.map((rec) => {
+            {isOffline && records.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={6}
+                  className="py-8 text-center text-[#64748B] font-mono text-[0.75rem]"
+                >
+                  <p className="text-amber-800 font-semibold mb-1">Stream unavailable</p>
+                  <p className="text-[#64748B]">Backend is not responding</p>
+                </td>
+              </tr>
+            ) : records.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={6}
+                  className="py-8 text-center text-[#64748B] font-mono text-[0.75rem]"
+                >
+                  No buffered frames available.
+                </td>
+              </tr>
+            ) : (
+              records.map((rec) => {
               const dateStr = new Date(rec.timestamp).toLocaleTimeString("en-US", { timeZone: "UTC" });
               const disposition = rec.ocsf?.disposition || "ALLOWED";
               const isAllowed =
@@ -135,7 +163,8 @@ export function OcsfStreamTable({ records }: OcsfStreamTableProps) {
                   </td>
                 </tr>
               );
-            })}
+            })
+          )}
           </tbody>
         </table>
       </div>

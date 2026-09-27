@@ -6,36 +6,68 @@ import { HeroMetrics } from "@/components/threat-intel/HeroMetrics";
 import { VendorMix } from "@/components/threat-intel/VendorMix";
 import { DispositionSplit } from "@/components/threat-intel/DispositionSplit";
 import { AttackVectorsTable } from "@/components/threat-intel/AttackVectorsTable";
-import { getMetrics } from "@/lib/api";
+import { getMetrics, getApiMode } from "@/lib/api";
 import { MetricsResponse, AttackVectorItem } from "@/lib/types";
 import { mockMetrics, mockAttackVectors } from "@/lib/mock-data";
 import { Download, RefreshCw } from "lucide-react";
 
 export default function ThreatIntelligencePage() {
-  const [metrics, setMetrics] = useState<MetricsResponse>(mockMetrics);
+  const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
   const [vectors] = useState<AttackVectorItem[]>(mockAttackVectors);
-  const [isLive, setIsLive] = useState(true);
+  const [isLive, setIsLive] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
-    let ignore = false;
+    let active = true;
+    let timerId: NodeJS.Timeout | null = null;
 
     async function loadData() {
+      const mode = getApiMode();
+      if (mode === "MOCK") {
+        setMetrics(mockMetrics);
+        setIsLive(false);
+        return;
+      }
       try {
         const res = await getMetrics();
-        if (ignore) return;
+        if (!active) return;
         setMetrics(res.data);
         setIsLive(res.isLive);
       } catch {
-        // Keep last good state
+        if (!active) return;
+        setIsLive(false);
+        setMetrics(null);
       }
     }
 
-    loadData();
-    const interval = setInterval(loadData, 1000);
+    async function pollLoop() {
+      if (!active) return;
+      await loadData();
+      if (!active) return;
+      timerId = setTimeout(pollLoop, 1000);
+    }
+
+    pollLoop();
+
     return () => {
-      ignore = true;
-      clearInterval(interval);
+      active = false;
+      if (timerId) clearTimeout(timerId);
+    };
+  }, []);
+
+  // Respond immediately to mode changes (LIVE <-> MOCK toggle)
+  useEffect(() => {
+    const handleModeChange = () => {
+      const mode = getApiMode();
+      if (mode === "LIVE") {
+        setMetrics(null);
+        setIsLive(false);
+      }
+    };
+
+    window.addEventListener("ulpf_api_mode_change", handleModeChange);
+    return () => {
+      window.removeEventListener("ulpf_api_mode_change", handleModeChange);
     };
   }, []);
 
@@ -43,8 +75,8 @@ export default function ThreatIntelligencePage() {
     setExporting(true);
     const matrix = {
       exported_at: new Date().toISOString(),
-      vendor_mix: metrics.vendor_mix,
-      disposition_breakdown: metrics.disposition_breakdown,
+      vendor_mix: metrics?.vendor_mix ?? {},
+      disposition_breakdown: metrics?.disposition_breakdown ?? {},
       attack_vectors: vectors,
     };
     const blob = new Blob([JSON.stringify(matrix, null, 2)], {
@@ -59,8 +91,14 @@ export default function ThreatIntelligencePage() {
     setTimeout(() => setExporting(false), 800);
   };
 
+  const status: "LIVE" | "MOCK" | "OFFLINE" = isLive
+    ? "LIVE"
+    : getApiMode() === "MOCK"
+    ? "MOCK"
+    : "OFFLINE";
+
   return (
-    <AppShell currentSection="THREAT_INTEL" eps={metrics.eps}>
+    <AppShell currentSection="THREAT_INTEL" eps={metrics?.eps}>
       <div className="flex flex-col w-full gap-5">
         {/* Operational Breadcrumb & Live Endpoint Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm">
@@ -79,21 +117,39 @@ export default function ThreatIntelligencePage() {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#10B981] animate-ping"></span>
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isLive
+                    ? "bg-[#10B981] animate-ping"
+                    : getApiMode() === "MOCK"
+                    ? "bg-sky-500"
+                    : "bg-amber-500"
+                }`}
+              ></span>
               <p className="font-mono text-[0.75rem] text-[#0284C7] font-medium">
                 API Sync: GET /metrics (vendor_mix, disposition_breakdown)
               </p>
-              <span className="font-mono text-[0.6875rem] px-2 py-0.5 rounded bg-[#F1F5F9] text-[#64748B] border border-[#E2E8F0] font-medium">
-                HTTP 200 OK
+              <span
+                className={`font-mono text-[0.6875rem] px-2 py-0.5 rounded font-medium border ${
+                  isLive
+                    ? "bg-[#F1F5F9] text-[#64748B] border-[#E2E8F0]"
+                    : getApiMode() === "MOCK"
+                    ? "bg-sky-50 text-sky-700 border-sky-200"
+                    : "bg-amber-50 text-amber-800 border-amber-200"
+                }`}
+              >
+                {isLive ? "HTTP 200 OK" : getApiMode() === "MOCK" ? "MOCK FIXTURE" : "DISCONNECTED"}
               </span>
               <span
                 className={`font-mono text-[0.6875rem] px-2 py-0.5 rounded font-semibold border ${
                   isLive
                     ? "bg-emerald-50 text-emerald-700 border-emerald-300"
-                    : "bg-sky-50 text-sky-700 border-sky-300"
+                    : getApiMode() === "MOCK"
+                    ? "bg-sky-50 text-sky-700 border-sky-300"
+                    : "bg-amber-50 text-amber-800 border-amber-300"
                 }`}
               >
-                {isLive ? "LIVE" : "FIXTURE"}
+                {status}
               </span>
             </div>
           </div>
@@ -101,7 +157,11 @@ export default function ThreatIntelligencePage() {
           {/* Live Polling Utility & Fast Time Filter */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 bg-[#F0F3FF] border border-[#E2E8F0] px-3 py-1.5 rounded-lg shadow-sm">
-              <RefreshCw className="w-4 h-4 text-[#10B981] animate-spin" />
+              <RefreshCw
+                className={`w-4 h-4 ${
+                  isLive ? "text-[#10B981] animate-spin" : "text-[#64748B]"
+                }`}
+              />
               <span className="font-mono text-[0.75rem] text-[#64748B]">
                 Poll Rate: <strong className="text-[#1E293B] font-semibold">1,000ms</strong>
               </span>
@@ -131,7 +191,11 @@ export default function ThreatIntelligencePage() {
         </div>
 
         {/* Bottom Section: Live IOC Correlated Attack Vectors Data Table */}
-        <AttackVectorsTable vectors={vectors} />
+        <AttackVectorsTable
+          vectors={vectors}
+          isLive={isLive}
+          status={status}
+        />
       </div>
     </AppShell>
   );
