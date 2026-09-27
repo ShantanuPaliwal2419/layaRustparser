@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -45,19 +46,7 @@ export function AttackVectorsTable({
                   : "IOC Correlated Attack Vectors"}
               </h2>
 
-              {isActuallyLive ? (
-                <span className="font-mono text-[0.6875rem] px-2 py-0.5 rounded font-semibold border bg-emerald-50 text-emerald-700 border-emerald-300">
-                  LIVE
-                </span>
-              ) : isMock ? (
-                <span className="font-mono text-[0.6875rem] px-2 py-0.5 rounded font-semibold border bg-sky-50 text-sky-700 border-sky-300">
-                  MOCK
-                </span>
-              ) : (
-                <span className="font-mono text-[0.6875rem] px-2 py-0.5 rounded font-semibold border bg-amber-50 text-amber-800 border-amber-300">
-                  OFFLINE
-                </span>
-              )}
+
             </div>
 
             <span className="font-mono text-[0.75rem] text-[#64748B]">
@@ -74,10 +63,10 @@ export function AttackVectorsTable({
           <div className="flex items-center gap-1.5 font-mono text-[0.75rem] text-[#64748B]">
             <span
               className={`w-2 h-2 rounded-full ${isActuallyLive
-                  ? "bg-[#10B981] animate-ping"
-                  : isMock
-                    ? "bg-sky-500"
-                    : "bg-amber-500"
+                ? "bg-[#10B981] animate-ping"
+                : isMock
+                  ? "bg-sky-500"
+                  : "bg-amber-500"
                 }`}
             />
 
@@ -107,13 +96,12 @@ export function AttackVectorsTable({
             </span>
           </div>
 
-          {/* No filtering when offline */}
           {!isOffline && (
             <button
               onClick={() => setFilterActive((prev) => !prev)}
               className={`flex items-center gap-1.5 px-3 py-1 rounded font-mono text-[0.75rem] font-semibold transition-colors cursor-pointer border ${filterActive
-                  ? "bg-[#0284C7] text-white border-[#0284C7]"
-                  : "bg-[#0284C7]/10 text-[#0284C7] border-[#0284C7]/30 hover:bg-[#0284C7]/20"
+                ? "bg-[#0284C7] text-white border-[#0284C7]"
+                : "bg-[#0284C7]/10 text-[#0284C7] border-[#0284C7]/30 hover:bg-[#0284C7]/20"
                 }`}
             >
               <Filter className="w-3.5 h-3.5" />
@@ -142,32 +130,14 @@ export function AttackVectorsTable({
         </div>
       ) : (
         <>
-          {/* MOCK notice */}
-          {isMock && (
-            <div className="flex items-center justify-between px-3 py-2 mb-3 rounded-lg border font-mono text-[0.75rem] bg-sky-50/70 border-sky-200 text-sky-800">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white border border-current text-[0.6875rem]">
-                  MOCK FIXTURE
-                </span>
-
-                <span>
-                  Operating in MOCK mode. These IOC records are simulated
-                  fixtures for interface demonstration.
-                </span>
-              </div>
-
-              <span className="font-medium text-[0.6875rem] text-[#64748B]">
-                FIXTURE
-              </span>
-            </div>
-          )}
-
           {/* Table */}
           <div className="w-full overflow-x-auto">
             <table className="w-full text-left text-[0.875rem]">
               <thead>
                 <tr className="bg-[#F8FAFC] text-[#64748B] border-y border-[#E2E8F0] font-mono text-[0.75rem] uppercase tracking-wider">
-                  <th className="py-2.5 px-3 font-semibold">Timestamp (UTC)</th>
+                  <th className="py-2.5 px-3 font-semibold">
+                    Timestamp (UTC)
+                  </th>
                   <th className="py-2.5 px-3 font-semibold">
                     Indicator IP (IOC)
                   </th>
@@ -220,10 +190,10 @@ export function AttackVectorsTable({
                       <td className="py-3 px-3 whitespace-nowrap">
                         <span
                           className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[0.6875rem] ${isCrit
-                              ? "bg-[#BA1A1A] text-white"
-                              : isHigh
-                                ? "bg-amber-100 text-amber-900 border border-amber-300"
-                                : "bg-blue-100 text-blue-900 border border-blue-300"
+                            ? "bg-[#BA1A1A] text-white"
+                            : isHigh
+                              ? "bg-amber-100 text-amber-900 border border-amber-300"
+                              : "bg-blue-100 text-blue-900 border border-blue-300"
                             }`}
                         >
                           {item.severity}
@@ -237,10 +207,10 @@ export function AttackVectorsTable({
                       <td className="py-3 px-3 text-right whitespace-nowrap">
                         <span
                           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded font-semibold text-[0.6875rem] ${item.status === "BLOCKED"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-300"
-                              : item.status === "CONTAINED"
-                                ? "bg-sky-50 text-sky-700 border border-sky-300"
-                                : "bg-amber-50 text-amber-700 border border-amber-300"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-300"
+                            : item.status === "CONTAINED"
+                              ? "bg-sky-50 text-sky-700 border border-sky-300"
+                              : "bg-amber-50 text-amber-700 border border-amber-300"
                             }`}
                         >
                           <ShieldCheck className="w-3 h-3" />

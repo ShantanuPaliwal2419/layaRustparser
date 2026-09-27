@@ -184,10 +184,22 @@ export function KpiTelemetryCards({
               <span className="font-mono text-[0.75rem] text-[#64748B]">EPS</span>
             </div>
           </div>
-          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-[#F0F3FF] text-[#009768] font-mono text-[0.6875rem] font-semibold border border-emerald-200">
-            <TrendingUp className="w-3 h-3 text-[#009768]" />
-            +12.4% vs avg
-          </span>
+          <div className="flex items-center gap-1.5">
+            {status === "MOCK" && (
+              <span className="font-mono text-[0.6875rem] px-2 py-0.5 rounded font-semibold border bg-sky-50 text-sky-700 border-sky-300">
+                MOCK
+              </span>
+            )}
+            {status === "LIVE" && (
+              <span className="font-mono text-[0.6875rem] px-2 py-0.5 rounded font-semibold border bg-emerald-50 text-emerald-700 border-emerald-300">
+                LIVE
+              </span>
+            )}
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-[#F0F3FF] text-[#009768] font-mono text-[0.6875rem] font-semibold border border-emerald-200">
+              <TrendingUp className="w-3 h-3 text-[#009768]" />
+              +12.4% vs avg
+            </span>
+          </div>
         </div>
 
         {/* Mini Sparkline SVG */}

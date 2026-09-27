@@ -41,6 +41,7 @@ export function IncidentQueue({ alerts, selectedId, onSelect }: IncidentQueuePro
           </button>
           <button
             onClick={() => {
+              if (!isAvailable) return;
               const blob = new Blob([JSON.stringify(alertList, null, 2)], {
                 type: "application/json",
               });
@@ -51,7 +52,8 @@ export function IncidentQueue({ alerts, selectedId, onSelect }: IncidentQueuePro
               a.click();
               URL.revokeObjectURL(url);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[#44474A] bg-white border border-[#CBD5E1] shadow-sm hover:text-[#1E293B] font-mono text-[0.75rem] transition-colors cursor-pointer"
+            disabled={!isAvailable}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-[#44474A] bg-white border border-[#CBD5E1] shadow-sm hover:text-[#1E293B] font-mono text-[0.75rem] transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Download className="w-3.5 h-3.5" />
             <span>JSON Schema</span>

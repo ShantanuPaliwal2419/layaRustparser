@@ -173,7 +173,9 @@ export function AlertFeed({ alerts, onRefresh, status = "LIVE" }: AlertFeedProps
                   {isCritical ? (
                     <button
                       onClick={() =>
-                        alert
+                        window.alert(
+                          `Quarantine action dispatched for Block #${alert.block_id ?? 0}.`
+                        )
                       }
                       className="px-3 py-1.5 rounded-lg bg-[#BA1A1A] text-white hover:bg-[#93000A] font-mono text-[0.75rem] font-semibold transition-colors cursor-pointer shadow-sm"
                     >

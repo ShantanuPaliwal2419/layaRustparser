@@ -133,6 +133,7 @@ export default function AnalystDashboardPage() {
   // Respond immediately to mode changes (LIVE <-> MOCK toggle)
   useEffect(() => {
     const handleModeChange = () => {
+      latestPollIdRef.current += 1;
       const mode = getApiMode();
       if (mode === "LIVE") {
         // When switching to LIVE, clear state immediately until next successful poll
@@ -141,6 +142,24 @@ export default function AnalystDashboardPage() {
         setRecords([]);
         setHistory([]);
         setStatus("OFFLINE");
+      } else {
+        setMetrics(mockMetrics);
+        setAlerts(mockAlerts);
+        setRecords(mockRecords);
+        setStatus("MOCK");
+        setHistory((prev) =>
+          prev.length >= 2
+            ? prev
+            : [
+                { time: "-60s", eps: 141000, latency_p50: 1.35 },
+                { time: "-50s", eps: 141500, latency_p50: 1.3 },
+                { time: "-40s", eps: 142000, latency_p50: 1.34 },
+                { time: "-30s", eps: 141800, latency_p50: 1.28 },
+                { time: "-20s", eps: 142200, latency_p50: 1.26 },
+                { time: "-10s", eps: 142400, latency_p50: 1.29 },
+                { time: "0s", eps: 142500, latency_p50: 1.28 },
+              ]
+        );
       }
       pollData();
     };

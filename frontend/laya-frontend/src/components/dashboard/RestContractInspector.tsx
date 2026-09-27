@@ -9,7 +9,7 @@ interface RestContractInspectorProps {
   status?: "LIVE" | "MOCK" | "OFFLINE" | "STALE";
 }
 
-export function RestContractInspector({ metrics, status = "LIVE" }: RestContractInspectorProps) {
+export function RestContractInspector({ metrics, status = "OFFLINE" }: RestContractInspectorProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
