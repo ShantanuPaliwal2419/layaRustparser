@@ -161,7 +161,9 @@ export function BlockSelector({
             <p className="text-xs text-[#64748B]">
               {isOffline
                 ? `Showing cached ledger (${blocks.length} blocks) — Backend disconnected`
-                : `Dynamically loaded blocks from GET /blocks (${blocks.length} total blocks)`}
+                : isLive
+                ? `Dynamically loaded blocks from GET /blocks (${blocks.length} total blocks)`
+                : `Loaded blocks from Mock Ledger Fixture (${blocks.length} total blocks)`}
             </p>
           </div>
         </div>

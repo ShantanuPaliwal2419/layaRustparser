@@ -9,19 +9,27 @@ import { RecordInspector } from "@/components/query-explorer/RecordInspector";
 import {
   getBlocks,
   getBlockRecords,
+  getApiMode,
   getBackendStatus,
   subscribeBackendStatus,
   checkBackendReachable,
   ApiError,
+  ApiMode,
+  BackendStatus,
 } from "@/lib/api";
 import { BlockItem, StoredRecordItem, RecordsQueryParams } from "@/lib/types";
 import { Terminal, ArrowRight, WifiOff, RotateCcw } from "lucide-react";
 
 export default function QueryExplorerPage() {
   // Shared global API status - single source of truth across Header and Pages
-  const backendStatus = useSyncExternalStore(
+  const backendStatus = useSyncExternalStore<BackendStatus>(
     subscribeBackendStatus,
     () => getBackendStatus(),
+    () => "LIVE"
+  );
+  const apiMode = useSyncExternalStore<ApiMode>(
+    subscribeBackendStatus,
+    () => getApiMode(),
     () => "LIVE"
   );
 
@@ -54,45 +62,32 @@ export default function QueryExplorerPage() {
   const [selectedRecord, setSelectedRecord] = useState<StoredRecordItem | null>(null);
 
   const isMountedRef = useRef(true);
+  const activeRequestIdRef = useRef<number>(0);
+  const lastFetchedQueryRef = useRef<string>("");
+  const prevApiModeRef = useRef<ApiMode | null>(null);
+  const prevBackendStatusRef = useRef<BackendStatus | null>(null);
 
   // Derive consolidated offline / mock flags
   const isOffline = backendStatus === "OFFLINE" || requestState === "offline";
-  const isMock = backendStatus === "MOCK";
+  const isMock = apiMode === "MOCK";
   const effectiveIsLiveBlocks = !isMock && !isOffline && isLiveBlocks;
 
-  // 1. Fetch available blocks ledger
-  const loadBlocks = useCallback(async (preferredBlockId?: number) => {
-    setBlocksLoading(true);
-    try {
-      const res = await getBlocks();
-      if (!isMountedRef.current) return;
-      setBlocks(res.data);
-      setIsLiveBlocks(res.isLive);
-
-      // Auto-select preferred block or first available block
-      if (res.data.length > 0) {
-        setSelectedBlockId((prev) => {
-          if (preferredBlockId !== undefined) return preferredBlockId;
-          if (prev !== null && res.data.some((b) => b.block_id === prev)) return prev;
-          // Prefer block #1 or first existing block
-          const block1 = res.data.find((b) => b.block_id === 1);
-          return block1 ? block1.block_id : res.data[0].block_id;
-        });
-      }
-    } catch {
-      if (!isMountedRef.current) return;
-      // In offline/error case, preserve empty or previous blocks
-      setIsLiveBlocks(false);
-    } finally {
-      if (isMountedRef.current) {
-        setBlocksLoading(false);
-      }
-    }
-  }, []);
-
-  // 2. Fetch records for selected block
+  // 1. Fetch records for selected block
   const fetchRecords = useCallback(
-    async (blockId: number, queryFilters: RecordsQueryParams, pageOffset: number, pageLimit: number) => {
+    async (
+      blockId: number,
+      queryFilters: RecordsQueryParams,
+      pageOffset: number,
+      pageLimit: number,
+      force: boolean = false
+    ) => {
+      const mode = getApiMode();
+      const queryKey = `${mode}-${blockId}-${JSON.stringify(queryFilters)}-${pageOffset}-${pageLimit}`;
+      if (!force && lastFetchedQueryRef.current === queryKey) {
+        return;
+      }
+
+      const reqId = ++activeRequestIdRef.current;
       setRecordsLoading(true);
       setRequestState("loading");
       setErrorMessage(undefined);
@@ -104,8 +99,9 @@ export default function QueryExplorerPage() {
           limit: pageLimit,
         });
 
-        if (!isMountedRef.current) return;
+        if (!isMountedRef.current || activeRequestIdRef.current !== reqId) return;
 
+        lastFetchedQueryRef.current = queryKey;
         setRecords(res.data);
         setTotalRecordsInBlock(res.total);
         setFilteredCount(res.filteredCount);
@@ -119,7 +115,7 @@ export default function QueryExplorerPage() {
           return res.data[0] || null;
         });
       } catch (err: unknown) {
-        if (!isMountedRef.current) return;
+        if (!isMountedRef.current || activeRequestIdRef.current !== reqId) return;
 
         if (err instanceof ApiError) {
           if (err.isOffline) {
@@ -137,12 +133,55 @@ export default function QueryExplorerPage() {
           setErrorMessage(err instanceof Error ? err.message : "Failed to load records");
         }
       } finally {
-        if (isMountedRef.current) {
+        if (isMountedRef.current && activeRequestIdRef.current === reqId) {
           setRecordsLoading(false);
         }
       }
     },
     []
+  );
+
+  // 2. Fetch available blocks ledger and synchronize records
+  const loadBlocks = useCallback(
+    async (preferredBlockId?: number, shouldFetchRecords: boolean = true) => {
+      setBlocksLoading(true);
+      try {
+        const res = await getBlocks();
+        if (!isMountedRef.current) return;
+        setBlocks(res.data);
+        setIsLiveBlocks(res.isLive);
+
+        if (res.data.length > 0) {
+          let chosenBlockId: number;
+          if (preferredBlockId !== undefined && res.data.some((b) => b.block_id === preferredBlockId)) {
+            chosenBlockId = preferredBlockId;
+          } else if (selectedBlockId !== null && res.data.some((b) => b.block_id === selectedBlockId)) {
+            chosenBlockId = selectedBlockId;
+          } else {
+            const block1 = res.data.find((b) => b.block_id === 1);
+            chosenBlockId = block1 ? block1.block_id : res.data[0].block_id;
+          }
+
+          setSelectedBlockId(chosenBlockId);
+
+          if (shouldFetchRecords) {
+            await fetchRecords(chosenBlockId, filters, offset, limit, true);
+          }
+        } else {
+          setSelectedBlockId(null);
+          setRecords([]);
+        }
+      } catch {
+        if (!isMountedRef.current) return;
+        // In offline/error case, preserve empty or previous blocks
+        setIsLiveBlocks(false);
+      } finally {
+        if (isMountedRef.current) {
+          setBlocksLoading(false);
+        }
+      }
+    },
+    [selectedBlockId, filters, offset, limit, fetchRecords]
   );
 
   // Available vendors derived dynamically from records
@@ -154,32 +193,35 @@ export default function QueryExplorerPage() {
     return Array.from(set);
   }, [records]);
 
-  // Initial load
+  // Synchronize on mount, API mode change (LIVE <-> MOCK), or recovery from OFFLINE
   useEffect(() => {
     isMountedRef.current = true;
-    const timer = setTimeout(() => {
-      loadBlocks();
-    }, 0);
+
+    const isInitialMount = prevApiModeRef.current === null;
+    const modeChanged = prevApiModeRef.current !== null && prevApiModeRef.current !== apiMode;
+    const recoveredOnline = prevBackendStatusRef.current === "OFFLINE" && backendStatus === "LIVE";
+
+    prevApiModeRef.current = apiMode;
+    prevBackendStatusRef.current = backendStatus;
+
+    if (isInitialMount || modeChanged || recoveredOnline) {
+      if (modeChanged || recoveredOnline) {
+        lastFetchedQueryRef.current = "";
+      }
+      const timer = setTimeout(() => {
+        loadBlocks(undefined, true);
+      }, 0);
+
+      return () => {
+        isMountedRef.current = false;
+        clearTimeout(timer);
+      };
+    }
+
     return () => {
       isMountedRef.current = false;
-      clearTimeout(timer);
     };
-  }, [loadBlocks]);
-
-  // Listen to mode toggle from header (LIVE <-> MOCK) or reachability change
-  useEffect(() => {
-    const handleStatusChange = () => {
-      if (selectedBlockId !== null) {
-        fetchRecords(selectedBlockId, filters, offset, limit);
-      } else {
-        loadBlocks();
-      }
-    };
-    window.addEventListener("ulpf_api_mode_change", handleStatusChange);
-    return () => {
-      window.removeEventListener("ulpf_api_mode_change", handleStatusChange);
-    };
-  }, [loadBlocks, fetchRecords, selectedBlockId, filters, offset, limit]);
+  }, [apiMode, backendStatus, loadBlocks]);
 
   // Load records whenever block, filters, or pagination changes
   useEffect(() => {
@@ -198,44 +240,36 @@ export default function QueryExplorerPage() {
     if (newBlockId === selectedBlockId) return;
     setSelectedBlockId(newBlockId);
     setOffset(0);
-    fetchRecords(newBlockId, filters, 0, limit);
   };
 
   // Handle filter application from console
   const handleApplyFilters = (newFilters: RecordsQueryParams) => {
     setFilters(newFilters);
     setOffset(0);
-    if (selectedBlockId !== null) {
-      fetchRecords(selectedBlockId, newFilters, 0, limit);
-    }
   };
 
   // Handle clear filters
   const handleClearFilters = () => {
     setFilters({});
     setOffset(0);
-    if (selectedBlockId !== null) {
-      fetchRecords(selectedBlockId, {}, 0, limit);
-    }
   };
 
   // Handle pivot action from record inspector
   const handlePivot = (field: "ip" | "vendor" | "disposition", value: string) => {
-    const updated = { ...filters, [field]: value };
-    setFilters(updated);
+    setFilters((prev) => ({ ...prev, [field]: value }));
     setOffset(0);
-    if (selectedBlockId !== null) {
-      fetchRecords(selectedBlockId, updated, 0, limit);
-    }
   };
 
-  // Handle retry
+  // Handle refresh / retry
+  const handleRefresh = useCallback(() => {
+    lastFetchedQueryRef.current = "";
+    loadBlocks(selectedBlockId ?? undefined, true);
+  }, [loadBlocks, selectedBlockId]);
+
   const handleRetry = async () => {
     await checkBackendReachable();
-    if (selectedBlockId !== null) {
-      fetchRecords(selectedBlockId, filters, offset, limit);
-    }
-    loadBlocks(selectedBlockId ?? undefined);
+    lastFetchedQueryRef.current = "";
+    loadBlocks(selectedBlockId ?? undefined, true);
   };
 
   return (
@@ -249,9 +283,6 @@ export default function QueryExplorerPage() {
                 <Terminal className="w-5 h-5 text-[#0284C7]" />
                 Query Explorer & Investigation Workspace
               </h1>
-              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded bg-slate-200 text-[#1E293B]">
-                Issue #14
-              </span>
 
               {/* Page-level status badge */}
               {isOffline ? (
@@ -335,7 +366,7 @@ export default function QueryExplorerPage() {
             selectedBlockId={selectedBlockId}
             onSelectBlock={handleSelectBlock}
             isLoading={blocksLoading}
-            onRefresh={() => loadBlocks(selectedBlockId ?? undefined)}
+            onRefresh={handleRefresh}
             isLive={effectiveIsLiveBlocks}
             isOffline={isOffline}
           />
