@@ -193,8 +193,8 @@ export default function ThreatIntelligencePage() {
         {/* Bottom Section: Live IOC Correlated Attack Vectors Data Table */}
         <AttackVectorsTable
           vectors={vectors}
-          isLive={isLive}
-          status={status}
+          isLive={false}
+          status={status === "OFFLINE" ? "OFFLINE" : "MOCK"}
         />
       </div>
     </AppShell>
