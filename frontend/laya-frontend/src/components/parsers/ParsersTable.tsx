@@ -205,9 +205,7 @@ export function ParsersTable({
 
                     {/* Parser Type */}
                     <td className="py-3 px-4 font-mono text-[0.75rem] text-[#64748B]">
-                      {item.parser_type === "native_extractor"
-                        ? "native_extractor"
-                        : "dynamic_onboarded"}
+                      {item.parser_type}
                     </td>
 
                     {/* Status */}
